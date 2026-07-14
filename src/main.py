@@ -9,7 +9,8 @@ You will implement the functions in recommender.py:
 - recommend_songs
 """
 
-from recommender import load_songs, recommend_songs
+#FIX: make importing relative so that it actually works
+from .recommender import load_songs, recommend_songs
 
 
 def main() -> None:

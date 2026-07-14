@@ -23,9 +23,13 @@ Some prompts to answer:
 
 - What features does each `Song` use in your system
   - For example: genre, mood, energy, tempo
+  > In this setup, each song contains metadata about the id, artist, genre, mood, energy, tempo, valence, danceability, and acousticness.
 - What information does your `UserProfile` store
+  > The UserProfile stores a user's favorite genre, mood, their preferred energy level, and whether they like acoustic tracks (people don't?).
 - How does your `Recommender` compute a score for each song
+  > As of this commit, the idea is to calculate a base score depending on how close a song's energy matches the preferred energy level of the user, and either uprank or derank a song based on how acoustic it is and whether the user likes acoustic songs. Additionally, a fixed addition of 3 or 2 points is added to a song's score if it matches a user's favorite genre or mood respectively. 
 - How do you choose which songs to recommend
+  > Songs that score highly using the scoring formula are recommended, beyond a certain score threshold (to be determined) songs wiz`ll not be recommended.
 
 You can include a simple diagram or bullet list if helpful.
 
