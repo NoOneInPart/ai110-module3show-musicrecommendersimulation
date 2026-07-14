@@ -27,9 +27,9 @@ Some prompts to answer:
 - What information does your `UserProfile` store
   > The UserProfile stores a user's favorite genre, mood, their preferred energy level, and whether they like acoustic tracks (people don't?).
 - How does your `Recommender` compute a score for each song
-  > As of this commit, the idea is to calculate a base score depending on how close a song's energy matches the preferred energy level of the user, and either uprank or derank a song based on how acoustic it is and whether the user likes acoustic songs. Additionally, a fixed addition of 3 or 2 points is added to a song's score if it matches a user's favorite genre or mood respectively. 
+  > As of this commit, the score is built around a base score (called the backbone) and some bonuses for categorical matches. The backbone (weight 5.0) rewards how closely a song's energy matches the user's preferred energy level, so a song that "sounds like" what the user wants ranks highly even if its labels don't match exactly. On top of that, small fixed bonuses nudge the ranking: +1.0 if the song's genre matches the user's favorite, +1.0 if the mood matches, and +0.5 if the song's acoustic-ness agrees with the user's `likes_acoustic` preference. The acoustic term is a pure bonus (never a penalty), so a user who simply hasn't asked for acoustic tracks isn't punished for songs that happen to be acoustic. This setup prevents the algorithm from overwhelmingly recommending songs that fit into specific categories based on the specific genre name or mood, but it does mean most of the songs recommended have similar energy levels.
 - How do you choose which songs to recommend
-  > Songs that score highly using the scoring formula are recommended, beyond a certain score threshold (to be determined) songs wiz`ll not be recommended.
+  > Every song in the catalog is scored with the formula above, then the list is ranked from highest to lowest score and the top `k` songs (default 5) are returned. The scoring rule judges one song at a time; the ranking rule turns those scores into an ordered shortlist.
 
 You can include a simple diagram or bullet list if helpful.
 
