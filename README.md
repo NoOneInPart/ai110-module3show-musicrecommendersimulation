@@ -75,15 +75,46 @@ You can add more tests in `tests/test_recommender.py`.
 Paste a sample of your recommender's output here as a text block so a reader can see what it produces:
 
 ```
-# e.g.:
-# User profile: genre=indie, mood=chill, energy=low
-# Recommendations:
-#   1. ...
-#   2. ...
-#   3. ...
-```
+============================================================
+  TOP RECOMMENDATIONS
+============================================================
+  Profile: genre=pop, mood=happy, energy=0.8, likes_acoustic=False
+------------------------------------------------------------
+  1. Sunrise City - Neon Echo  (score: 7.40)
+       [pop / happy]
+       why:
+         - energy 0.82 is close to your target 0.80
+         - matches your favorite genre (pop)
+         - matches your mood (happy)
+         - it's not acoustic, matching your preference
 
-**Screenshot or video** *(optional)*: <!-- Insert a screenshot or demo video link here -->
+  2. Get Lucky - Daft Punk  (score: 6.45)
+       [disco / happy]
+       why:
+         - energy 0.81 is close to your target 0.80
+         - matches your mood (happy)
+         - it's not acoustic, matching your preference
+
+  3. Rooftop Lights - Indigo Parade  (score: 6.30)
+       [indie pop / happy]
+       why:
+         - energy 0.76 is close to your target 0.80
+         - matches your mood (happy)
+         - it's not acoustic, matching your preference
+
+  4. Gym Hero - Max Pulse  (score: 5.85)
+       [pop / intense]
+       why:
+         - energy 0.93 is close to your target 0.80
+         - matches your favorite genre (pop)
+         - it's not acoustic, matching your preference
+
+  5. Night Drive Loop - Neon Echo  (score: 5.25)
+       [synthwave / moody]
+       why:
+         - energy 0.75 is close to your target 0.80
+         - it's not acoustic, matching your preference
+```
 
 ---
 

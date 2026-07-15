@@ -1,5 +1,6 @@
-from typing import List, Dict, Tuple, Optional
-from dataclasses import dataclass
+import csv
+from typing import List, Dict, Tuple
+from dataclasses import dataclass, asdict
 
 # --- scoring weights (the "algorithm recipe" knobs) ---
 # Heavy continuous backbone; light categorical bonuses on top.
@@ -48,21 +49,59 @@ class Recommender:
         self.songs = songs
 
     def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
-        # TODO: Implement recommendation logic
-        return self.songs[:k]
+        # Reuse the shared scoring rule so OOP and functional paths agree.
+        # asdict(user) yields the exact keys score_song expects.
+        prefs = asdict(user)
+        ranked = sorted(
+            self.songs,
+            key=lambda song: score_song(prefs, asdict(song))[0],
+            reverse=True,
+        )
+        return ranked[:k]
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
-        # TODO: Implement explanation logic
-        return "Explanation placeholder"
+        score, reasons = score_song(asdict(user), asdict(song))
+        detail = ", ".join(reasons) if reasons else "it didn't strongly match your preferences"
+        return f"'{song.title}' by {song.artist} scored {score:.2f}: {detail}"
+
+# Which CSV columns to convert to which numeric type. Anything not listed
+# stays a str (title, artist, genre, mood).
+_INT_FIELDS = {"id"}
+_FLOAT_FIELDS = {
+    "energy",
+    "tempo_bpm",
+    "valence",
+    "danceability",
+    "acousticness",
+}
+
 
 def load_songs(csv_path: str) -> List[Dict]:
     """
-    Loads songs from a CSV file.
+    Loads songs from a CSV file into a list of dicts.
+
+    Numeric columns are converted to the appropriate type: `id` becomes an
+    int, the audio-feature columns (energy, tempo_bpm, valence,
+    danceability, acousticness) become floats, and text columns (title,
+    artist, genre, mood) stay as strings. Downstream scoring can therefore
+    rely on numbers being real numbers, not strings.
+
     Required by src/main.py
     """
-    # TODO: Implement CSV loading logic
-    print(f"Loading songs from {csv_path}...")
-    return []
+    songs: List[Dict] = []
+    with open(csv_path, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            song: Dict = {}
+            for key, value in row.items():
+                if key in _INT_FIELDS:
+                    song[key] = int(value)
+                elif key in _FLOAT_FIELDS:
+                    song[key] = float(value)
+                else:
+                    song[key] = value
+            songs.append(song)
+    return songs
 
 def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     """
@@ -86,7 +125,7 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     reasons: List[str] = []
 
     # HEAVY: energy closeness (both values are on a 0-1 scale)
-    target_energy = user_prefs.get("energy")
+    target_energy = user_prefs.get("target_energy")
     if target_energy is not None:
         song_energy = float(song["energy"])
         closeness = 1 - abs(song_energy - float(target_energy))
@@ -96,12 +135,12 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
         )
 
     # SLIGHT: exact genre match
-    if user_prefs.get("genre") and song.get("genre") == user_prefs["genre"]:
+    if user_prefs.get("favorite_genre") and song.get("genre") == user_prefs["favorite_genre"]:
         score += W_GENRE
         reasons.append(f"matches your favorite genre ({song['genre']})")
 
     # SLIGHT: exact mood match
-    if user_prefs.get("mood") and song.get("mood") == user_prefs["mood"]:
+    if user_prefs.get("favorite_mood") and song.get("mood") == user_prefs["favorite_mood"]:
         score += W_MOOD
         reasons.append(f"matches your mood ({song['mood']})")
 
@@ -121,9 +160,30 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
 
 def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
     """
-    Functional implementation of the recommendation logic.
+    Ranks the catalog for a user and returns the top-k recommendations.
+
+    Scoring (per song) and ranking (over the list) are kept as two steps:
+    `score_song` judges one song, and this function orders those scores.
+
+    Returns a list of (song, score, explanation) tuples, sorted from
+    highest score to lowest and truncated to k items.
+
     Required by src/main.py
     """
-    # TODO: Implement scoring and ranking logic
-    # Expected return format: (song_dict, score, explanation)
-    return []
+    # Score every song. A list comprehension is the Pythonic way to build a
+    # new list from an existing iterable in one clear expression.
+    scored = [
+        (song, *score_song(user_prefs, song))  # -> (song, score, reasons)
+        for song in songs
+    ]
+
+    # Rank: sorted() returns a NEW list (leaving `songs` untouched); the key
+    # picks the score, and reverse=True gives highest-to-lowest order.
+    ranked = sorted(scored, key=lambda item: item[1], reverse=True)
+
+    # Join reasons with newlines so callers can print one per line, then
+    # keep only the top k.
+    return [
+        (song, score, "\n".join(reasons) if reasons else "no strong matches")
+        for song, score, reasons in ranked[:k]
+    ]
