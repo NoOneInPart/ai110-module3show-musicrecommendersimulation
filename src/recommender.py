@@ -9,9 +9,6 @@ W_GENRE = 1.0     # slight boost for an exact genre match
 W_MOOD = 1.0      # slight boost for an exact mood match
 W_ACOUSTIC = 0.5  # slight boost when acoustic-ness agrees with the user
 
-# A song is treated as "acoustic" at or above this acousticness value.
-ACOUSTIC_THRESHOLD = 0.5
-
 @dataclass
 class Song:
     """
@@ -113,8 +110,10 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
         user's preferred energy (weight W_ENERGY).
       - Slight categorical bonuses: +W_GENRE / +W_MOOD for an exact
         genre / mood match.
-      - Slight acoustic bonus (pure bonus, never a penalty): +W_ACOUSTIC
-        when the song's acoustic-ness agrees with the user's preference.
+      - Slight acoustic bonus (pure bonus, never a penalty): up to
+        +W_ACOUSTIC, scaled by how strongly the song's acoustic-ness agrees
+        with the user's preference (fully acoustic earns the whole bonus for
+        an acoustic-lover; fully electric earns it for someone who isn't).
 
     Any preference the user hasn't supplied is simply skipped, so an
     unspecified taste never helps or hurts a song.
@@ -144,17 +143,22 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
         score += W_MOOD
         reasons.append(f"matches your mood ({song['mood']})")
 
-    # SLIGHT: acoustic preference as a pure bonus (never subtracts)
+    # SLIGHT: acoustic preference as a pure bonus (never subtracts), scaled by
+    # how acoustic the song actually is. An acoustic-lover gets the full
+    # W_ACOUSTIC for a fully-acoustic song and nothing for a fully-electric
+    # one; the reverse holds for someone who doesn't like acoustic.
     likes_acoustic = user_prefs.get("likes_acoustic")
     if likes_acoustic is not None:
-        song_is_acoustic = float(song["acousticness"]) >= ACOUSTIC_THRESHOLD
-        if song_is_acoustic == likes_acoustic:
-            score += W_ACOUSTIC
-            reasons.append(
-                "it's acoustic like you prefer"
+        acousticness = float(song["acousticness"])
+        agreement = acousticness if likes_acoustic else 1 - acousticness
+        score += W_ACOUSTIC * agreement
+        reasons.append(
+            f"acousticness {acousticness:.2f} " + (
+                "leans acoustic like you prefer"
                 if likes_acoustic
-                else "it's not acoustic, matching your preference"
+                else "leans electric, matching your preference"
             )
+        )
 
     return score, reasons
 
